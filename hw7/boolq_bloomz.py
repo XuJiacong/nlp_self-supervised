@@ -1,8 +1,18 @@
 import os
-import openai
 from datasets import load_dataset
+import requests
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+API_URL = "https://api-inference.huggingface.co/models/bigscience/bloomz"
+headers = {"Authorization": "Bearer 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"}
+
+def query(payload):
+	response = requests.post(API_URL, headers=headers, json=payload)
+	return response.json()
+	
+output = query({
+	"inputs": "Can you please let us know more details about your ",
+})
+
 
 dataset = load_dataset("boolq")
 train_dataset = dataset["train"].select(range(1000))
@@ -37,7 +47,7 @@ print(question_prompt)
 # Format the prompts
 def format_prompt(passage, question):
     prompt = ''
-    for i in range(8):
+    for i in range(4):
         prompt += f"Passage: {passage_prompt[i]} \nQuestion: {question_prompt[i]}? \nAnswer: {answer_prompt[i]} \n"
     prompt += f"Passage: {passage} \nQuestion: {question}? \nAnswer: "
     return prompt
@@ -45,22 +55,16 @@ def format_prompt(passage, question):
 correct = 0.0
 for i in range(30):
     prompt = format_prompt(passage_prompt[i+8], question_prompt[i+8])
-
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=prompt,
-        temperature=0.7,
-        max_tokens=256,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0
-    )
+    answer = query({"inputs": prompt})[0]['generated_text'].split()[-1]
 
     print(answer_prompt[i+8])
-    answer = response['choices'][0]['text']
     print(answer)
-    if answer[1:] == answer_prompt[i+8]:
+    if answer == answer_prompt[i+8]:
         correct += 1
         print("Correct")
 
 print(f"Accuracy: {correct/30}")
+
+
+
+
